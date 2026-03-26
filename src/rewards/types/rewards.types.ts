@@ -46,11 +46,24 @@ export interface PerfPoolResult {
 export type CountryNodeCounts = Record<string, number>;
 
 export interface RewardsTreeData {
+    periodId: number;
+    formulaVersion: number;
+    snapshotHash: string;
+    rewardDistributorAddress: string;
     root: string;
-    tree: Buffer<ArrayBufferLike>[][];
+    tree: Buffer[][];
     rewards: ProviderReward[];
 }
 
 export interface NodeWithWeight extends Node {
     weight: number;
 }
+
+export interface UpdateMonthlyRewardsInput {
+    totalReward: number;
+    periodId: number;
+    formulaVersion: number;
+    snapshotHash: string;
+    rewardDistributorAddress: string;
+}
+

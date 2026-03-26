@@ -1,5 +1,8 @@
 export interface RewardResponseDTO {
+    periodId: number;
     amount: string;
-    proof: string[];
+    formulaVersion: number;
+    snapshotHash: string;
     root: string;
+    proofCellBoc: string;
 }

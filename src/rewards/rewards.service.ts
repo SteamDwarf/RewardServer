@@ -14,6 +14,7 @@ import {
     ProviderRewardResult,
     RewardsCalculationResult,
     RewardsTreeData,
+    UpdateMonthlyRewardsInput,
 } from './types/rewards.types';
 import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
 
@@ -33,31 +34,38 @@ export class RewardsService {
     };
     private readonly baseMargin = 1.2;
     private treeData: RewardsTreeData | null = null;
+    private treeDataByPeriod = new Map<number, RewardsTreeData>();
 
     constructor(
         private readonly merkleService: MerkleService,
         private readonly nodesService: NodesService,
     ) {}
 
-    getRewardData(providerAddress: string): RewardResponseDTO {
-        if (!this.treeData) {
-            throw new NotFoundException('No rewards');
+    getRewardData(periodId: number, providerAddress: string): RewardResponseDTO {
+        const data = this.treeDataByPeriod.get(periodId);
+        if (!data) {
+            throw new NotFoundException('No rewards for this period');
         }
 
-        const index = this.treeData.rewards.findIndex((reward) =>
-            Address.parse(reward.address).equals(Address.parse(providerAddress)),
+        const provider = Address.parse(providerAddress);
+        const index = data.rewards.findIndex((reward) =>
+            Address.parse(reward.address).equals(provider),
         );
 
         if (index === -1) {
             throw new NotFoundException('No rewards for this address');
         }
 
-        const proof = this.merkleService.getProof(this.treeData.tree, index);
+        const proofHashes = this.merkleService.getProofHashes(data.tree, index);
+        const proofCell = this.merkleService.buildProofCell(proofHashes);
 
         return {
-            amount: this.treeData.rewards[index].amount,
-            proof,
-            root: this.treeData.root,
+            periodId: data.periodId,
+            amount: data.rewards[index].amount,
+            formulaVersion: data.formulaVersion,
+            snapshotHash: `0x${data.snapshotHash}`,
+            root: `0x${data.root}`,
+            proofCellBoc: proofCell.toBoc().toString('base64'),
         };
     }
 
@@ -124,27 +132,41 @@ export class RewardsService {
         });
     }
 
-    async updateMonthlyRewards(totalReward: number): Promise<string> {
-        const calculation = this.calculateRewardsFromNodes(totalReward);
-        const rewards: ProviderReward[] = calculation.providers.map(
-            (provider) => ({
-                address: provider.address,
-                amount: this.toIntegerAmountString(provider.totalReward),
-            }),
-        );
+    async updateMonthlyRewards(input: UpdateMonthlyRewardsInput): Promise<string> {
+        const calculation = this.calculateRewardsFromNodes(input.totalReward);
+        const rewards: ProviderReward[] = calculation.providers.map((provider) => ({
+            address: Address.parse(provider.address).toString(),
+            amount: this.toIntegerAmountString(provider.totalReward),
+        }));
 
+        if (rewards.length === 0) {
+            throw new NotFoundException('No rewards to build Merkle root');
+        }
+
+        const snapshotHashBigInt = BigInt(input.snapshotHash);
         const leaves = rewards.map((reward) =>
-            this.merkleService.hashLeaf(reward.address, BigInt(reward.amount)),
+            this.merkleService.hashLeaf({
+                rewardDistributorAddress: input.rewardDistributorAddress,
+                periodId: input.periodId,
+                claimerAddress: reward.address,
+                amount: BigInt(reward.amount),
+                formulaVersion: input.formulaVersion,
+                snapshotHash: snapshotHashBigInt,
+            }),
         );
 
         const tree = this.merkleService.buildTree(leaves);
         const root = tree[tree.length - 1][0].toString('hex');
 
-        this.treeData = {
+        this.treeDataByPeriod.set(input.periodId, {
+            periodId: input.periodId,
+            formulaVersion: input.formulaVersion,
+            snapshotHash: snapshotHashBigInt.toString(16),
+            rewardDistributorAddress: Address.parse(input.rewardDistributorAddress).toString(),
             root,
             tree,
             rewards,
-        };
+        });
 
         return `0x${root}`;
     }

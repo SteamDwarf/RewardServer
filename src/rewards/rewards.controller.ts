@@ -24,19 +24,51 @@ export class RewardsController {
     @Post('update')
     async updateMonthlyRewards(
         @Query('totalReward') totalReward: string,
+        @Query('periodId') periodId: string,
+        @Query('formulaVersion') formulaVersion: string,
+        @Query('snapshotHash') snapshotHash: string,
+        @Query('rewardDistributorAddress') rewardDistributorAddress: string,
     ): Promise<string> {
-        const value = Number(totalReward);
-        
-        if (!Number.isFinite(value) || value <= 0) {
+        const rewardValue = Number(totalReward);
+        const periodValue = Number(periodId);
+        const formulaValue = Number(formulaVersion);
+
+        if (!Number.isFinite(rewardValue) || rewardValue <= 0) {
             throw new BadRequestException('totalReward must be a positive number');
         }
+        if (!Number.isInteger(periodValue) || periodValue < 0) {
+            throw new BadRequestException('periodId must be uint32');
+        }
+        if (!Number.isInteger(formulaValue) || formulaValue < 0) {
+            throw new BadRequestException('formulaVersion must be uint16');
+        }
+        if (!snapshotHash) {
+            throw new BadRequestException('snapshotHash is required');
+        }
+        if (!rewardDistributorAddress) {
+            throw new BadRequestException('rewardDistributorAddress is required');
+        }
 
-        return this.rewardsService.updateMonthlyRewards(value);
+        return this.rewardsService.updateMonthlyRewards({
+            totalReward: rewardValue,
+            periodId: periodValue,
+            formulaVersion: formulaValue,
+            snapshotHash,
+            rewardDistributorAddress,
+        });
     }
 
     @Get(':provider')
-    getRewardData(@Param('provider') provider: string): RewardResponseDTO {
-        return this.rewardsService.getRewardData(provider);
+    getRewardData(
+        @Param('provider') provider: string,
+        @Query('periodId') periodId: string,
+    ): RewardResponseDTO {
+        const periodValue = Number(periodId);
+        if (!Number.isInteger(periodValue) || periodValue < 0) {
+            throw new BadRequestException('periodId must be uint32');
+        }
+
+        return this.rewardsService.getRewardData(periodValue, provider);
     }
 
     /* @Get()

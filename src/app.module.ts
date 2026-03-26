@@ -6,10 +6,11 @@ import { MerkleService } from './merkle/merkle.service';
 import { MerkleModule } from './merkle/merkle.module';
 import { NodesModule } from './nodes/nodes.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { TonService } from './ton/ton.service';
 
 @Module({
   imports: [RewardsModule, MerkleModule, NodesModule, SubscriptionsModule],
   controllers: [AppController],
-  providers: [AppService, MerkleService],
+  providers: [AppService, MerkleService, TonService],
 })
 export class AppModule {}
