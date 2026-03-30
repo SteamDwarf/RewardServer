@@ -1,8 +1,20 @@
-import {Node} from '../../nodes/types/nodes.types';
+import { Address } from '@ton/core';
+import { Node } from '../../nodes/types/nodes.types';
 
-export interface ProviderReward {
-    address: string;
-    amount: string;
+export class NodesDemand {
+    country: string;
+    cost: bigint;
+    demand: number;
+    saturation: number;
+}
+
+export interface RewardInfo {
+    amount: bigint;
+    isClaimed: boolean;
+}
+
+export interface ProviderReward extends RewardInfo {
+    address: Address;
 }
 
 export interface NodeRewardResult {
@@ -21,9 +33,9 @@ export interface ProviderRewardResult {
 }
 
 export interface RewardsCalculationResult {
-    totalReward: number;
-    baseSum: number;
-    perfPool: number;
+    totalPool: bigint;
+    baseSum: bigint;
+    perfPool: bigint;
     totalWeight: number;
     providers: ProviderRewardResult[];
 }
@@ -40,30 +52,16 @@ export interface BaseRewardsResult {
 
 export interface PerfPoolResult {
     baseScale: number;
-    perfPool: number;
+    perfPool: bigint;
 }
 
 export type CountryNodeCounts = Record<string, number>;
-
-export interface RewardsTreeData {
-    periodId: number;
-    formulaVersion: number;
-    snapshotHash: string;
-    rewardDistributorAddress: string;
-    root: string;
-    tree: Buffer[][];
-    rewards: ProviderReward[];
-}
 
 export interface NodeWithWeight extends Node {
     weight: number;
 }
 
 export interface UpdateMonthlyRewardsInput {
-    totalReward: number;
+    totalPool: bigint;
     periodId: number;
-    formulaVersion: number;
-    snapshotHash: string;
-    rewardDistributorAddress: string;
 }
-

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NodeProvider } from './types/nodes.types';
+import { Address } from '@ton/core';
 
 @Injectable()
 export class NodesService {
@@ -9,35 +10,143 @@ export class NodesService {
         this.nodeProviders = [
             {
                 name: 'Atlas Nodes',
-                address: '0:e839e5a22cec5f2370adfbb0a4d713f0479d9861938ed9e2e31abd85244ad58e',
+                address:
+                    '0:e839e5a22cec5f2370adfbb0a4d713f0479d9861938ed9e2e31abd85244ad58e',
                 nodes: [
-                    { id: 101, country: 'US', rating: 4.8, reviewsCount: 128, tickets: 0, uptime: 0.99 },
-                    { id: 102, country: 'DE', rating: 3.2, reviewsCount: 41, tickets: 7, uptime: 0.92 },
-                    { id: 103, country: 'FR', rating: 1.1, reviewsCount: 12, tickets: 23, uptime: 0.64 },
-                    { id: 104, country: 'SG', rating: 0, reviewsCount: 0, tickets: 6, uptime: 0.91 },
-                    { id: 105, country: 'US', rating: 2.4, reviewsCount: 19, tickets: 14, uptime: 0.73 },
+                    {
+                        id: 101,
+                        country: 'US',
+                        rating: 4.8,
+                        reviewsCount: 128,
+                        tickets: 0,
+                        uptime: 0.99,
+                    },
+                    {
+                        id: 102,
+                        country: 'DE',
+                        rating: 3.2,
+                        reviewsCount: 41,
+                        tickets: 7,
+                        uptime: 0.92,
+                    },
+                    {
+                        id: 103,
+                        country: 'FR',
+                        rating: 1.1,
+                        reviewsCount: 12,
+                        tickets: 23,
+                        uptime: 0.64,
+                    },
+                    {
+                        id: 104,
+                        country: 'SG',
+                        rating: 0,
+                        reviewsCount: 0,
+                        tickets: 6,
+                        uptime: 0.91,
+                    },
+                    {
+                        id: 105,
+                        country: 'US',
+                        rating: 2.4,
+                        reviewsCount: 19,
+                        tickets: 14,
+                        uptime: 0.73,
+                    },
                 ],
             },
             {
                 name: 'Nordic Host',
-                address: '0:603ad3f8c87c882c3f096edcada7a55ca78cbca5f1c7b8cc9f6d701d2b52dc1a',
+                address:
+                    '0:603ad3f8c87c882c3f096edcada7a55ca78cbca5f1c7b8cc9f6d701d2b52dc1a',
                 nodes: [
-                    { id: 201, country: 'DE', rating: 4.9, reviewsCount: 210, tickets: 1, uptime: 0.997 },
-                    { id: 202, country: 'FR', rating: 2.0, reviewsCount: 33, tickets: 18, uptime: 0.81 },
-                    { id: 203, country: 'US', rating: 3.7, reviewsCount: 58, tickets: 0, uptime: 0.95 },
-                    { id: 204, country: 'SG', rating: 0, reviewsCount: 0, tickets: 27, uptime: 0.52 },
-                    { id: 205, country: 'DE', rating: 4.0, reviewsCount: 44, tickets: 5, uptime: 0.90 },
+                    {
+                        id: 201,
+                        country: 'DE',
+                        rating: 4.9,
+                        reviewsCount: 210,
+                        tickets: 1,
+                        uptime: 0.997,
+                    },
+                    {
+                        id: 202,
+                        country: 'FR',
+                        rating: 2.0,
+                        reviewsCount: 33,
+                        tickets: 18,
+                        uptime: 0.81,
+                    },
+                    {
+                        id: 203,
+                        country: 'US',
+                        rating: 3.7,
+                        reviewsCount: 58,
+                        tickets: 0,
+                        uptime: 0.95,
+                    },
+                    {
+                        id: 204,
+                        country: 'SG',
+                        rating: 0,
+                        reviewsCount: 0,
+                        tickets: 27,
+                        uptime: 0.52,
+                    },
+                    {
+                        id: 205,
+                        country: 'DE',
+                        rating: 4.0,
+                        reviewsCount: 44,
+                        tickets: 5,
+                        uptime: 0.9,
+                    },
                 ],
             },
             {
                 name: 'Aurora Cloud',
-                address: '0:61b08125a26d5004862d31c62fb87dd6428c91545dcffc38ced63a95653a9eca',
+                address:
+                    '0:61b08125a26d5004862d31c62fb87dd6428c91545dcffc38ced63a95653a9eca',
                 nodes: [
-                    { id: 301, country: 'FR', rating: 4.3, reviewsCount: 97, tickets: 3, uptime: 0.93 },
-                    { id: 302, country: 'US', rating: 1.8, reviewsCount: 21, tickets: 20, uptime: 0.78 },
-                    { id: 303, country: 'DE', rating: 3.9, reviewsCount: 63, tickets: 0, uptime: 0.96 },
-                    { id: 304, country: 'SG', rating: 2.7, reviewsCount: 34, tickets: 12, uptime: 0.70 },
-                    { id: 305, country: 'US', rating: 4.6, reviewsCount: 140, tickets: 4, uptime: 0.985 },
+                    {
+                        id: 301,
+                        country: 'FR',
+                        rating: 4.3,
+                        reviewsCount: 97,
+                        tickets: 3,
+                        uptime: 0.93,
+                    },
+                    {
+                        id: 302,
+                        country: 'US',
+                        rating: 1.8,
+                        reviewsCount: 21,
+                        tickets: 20,
+                        uptime: 0.78,
+                    },
+                    {
+                        id: 303,
+                        country: 'DE',
+                        rating: 3.9,
+                        reviewsCount: 63,
+                        tickets: 0,
+                        uptime: 0.96,
+                    },
+                    {
+                        id: 304,
+                        country: 'SG',
+                        rating: 2.7,
+                        reviewsCount: 34,
+                        tickets: 12,
+                        uptime: 0.7,
+                    },
+                    {
+                        id: 305,
+                        country: 'US',
+                        rating: 4.6,
+                        reviewsCount: 140,
+                        tickets: 4,
+                        uptime: 0.985,
+                    },
                 ],
             },
         ];
@@ -48,6 +157,8 @@ export class NodesService {
     }
 
     getProviderByAddress(address: string): NodeProvider | undefined {
-        return this.nodeProviders.find((p) => p.address === address);
+        return this.nodeProviders.find((p) =>
+            Address.parse(p.address).equals(Address.parse(address)),
+        );
     }
 }

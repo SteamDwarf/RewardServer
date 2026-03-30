@@ -1,9 +1,18 @@
-import { BadRequestException, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+    BadRequestException,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Query,
+} from '@nestjs/common';
 import { ProviderNodesWithWeightResponseDTO } from './dto/providerNodesWithWeightResponse.dto';
-import { type RewardResponseDTO } from './dto/rewardResponse.dto';
-import { RewardsCalculationResponseDTO } from './dto/rewardsCalculationResponse.dto';
 import { RewardsService } from './rewards.service';
 import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
+import { ProviderReward } from './types/rewards.types';
+import { fromNano } from '@ton/core';
+import { CalculateMonthlyRewardsDTO } from './dto/rewardsCalculationResponse.dto';
+import { ProviderRewardResponseDTO } from './dto/providerRewardResponse.dto';
 
 @Controller('rewards')
 export class RewardsController {
@@ -17,58 +26,59 @@ export class RewardsController {
     }
 
     @Get('nodes-demand')
-    getNodesDemand(): Promise<NodesDemandDataResponseDTO[]> {
-        return this.rewardsService.getNodesDemandData();
+    async getNodesDemand(): Promise<NodesDemandDataResponseDTO[]> {
+        const demand = await this.rewardsService.getNodesDemandData();
+
+        return demand.map((d) => ({
+            ...d,
+            cost: fromNano(d.cost),
+        }));
     }
 
     @Post('update')
-    async updateMonthlyRewards(
-        @Query('totalReward') totalReward: string,
+    async calculateMonthlyRewards(
+        @Query('totalPool') totalPool: string,
         @Query('periodId') periodId: string,
-        @Query('formulaVersion') formulaVersion: string,
-        @Query('snapshotHash') snapshotHash: string,
-        @Query('rewardDistributorAddress') rewardDistributorAddress: string,
-    ): Promise<string> {
-        const rewardValue = Number(totalReward);
+    ): Promise<CalculateMonthlyRewardsDTO[]> {
+        const rewardValue = BigInt(totalPool);
         const periodValue = Number(periodId);
-        const formulaValue = Number(formulaVersion);
 
-        if (!Number.isFinite(rewardValue) || rewardValue <= 0) {
-            throw new BadRequestException('totalReward must be a positive number');
+        if (rewardValue <= 0) {
+            throw new BadRequestException(
+                'totalPool must be a positive number',
+            );
         }
         if (!Number.isInteger(periodValue) || periodValue < 0) {
             throw new BadRequestException('periodId must be uint32');
         }
-        if (!Number.isInteger(formulaValue) || formulaValue < 0) {
-            throw new BadRequestException('formulaVersion must be uint16');
-        }
-        if (!snapshotHash) {
-            throw new BadRequestException('snapshotHash is required');
-        }
-        if (!rewardDistributorAddress) {
-            throw new BadRequestException('rewardDistributorAddress is required');
-        }
 
-        return this.rewardsService.updateMonthlyRewards({
-            totalReward: rewardValue,
+        const rewards = await this.rewardsService.calculateMonthlyRewards({
+            totalPool: rewardValue,
             periodId: periodValue,
-            formulaVersion: formulaValue,
-            snapshotHash,
-            rewardDistributorAddress,
         });
+
+        return rewards.map((r) => ({
+            ...r,
+            address: r.address.toString(),
+            amount: fromNano(r.amount),
+        }));
     }
 
     @Get(':provider')
-    getRewardData(
+    async getRewardData(
         @Param('provider') provider: string,
         @Query('periodId') periodId: string,
-    ): RewardResponseDTO {
+    ): Promise<ProviderRewardResponseDTO> {
         const periodValue = Number(periodId);
         if (!Number.isInteger(periodValue) || periodValue < 0) {
             throw new BadRequestException('periodId must be uint32');
         }
 
-        return this.rewardsService.getRewardData(periodValue, provider);
+        const reward = this.rewardsService.getRewardData(periodValue, provider);
+
+        return {
+            amount: fromNano(reward),
+        };
     }
 
     /* @Get()

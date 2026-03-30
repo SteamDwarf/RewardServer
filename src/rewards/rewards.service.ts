@@ -1,30 +1,29 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Address } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import { MerkleService } from 'src/merkle/merkle.service';
 import { NodesService } from 'src/nodes/nodes.service';
 import { Node, NodeProvider } from 'src/nodes/types/nodes.types';
 import { ProviderNodesWithWeightResponseDTO } from './dto/providerNodesWithWeightResponse.dto';
-import { RewardResponseDTO } from './dto/rewardResponse.dto';
 import {
     BaseRewardsResult,
     CountryNodeCounts,
+    NodesDemand,
     NodeWeightsResult,
     PerfPoolResult,
     ProviderReward,
     ProviderRewardResult,
     RewardsCalculationResult,
-    RewardsTreeData,
     UpdateMonthlyRewardsInput,
 } from './types/rewards.types';
 import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
 
 @Injectable()
 export class RewardsService {
-    private readonly countryBaseCost: Record<string, number> = {
-        US: 1.0,
-        DE: 2.0,
-        FR: 1.5,
-        SG: 1.0,
+    private readonly countryBaseCost: Record<string, bigint> = {
+        US: toNano('1.0'),
+        DE: toNano('2.0'),
+        FR: toNano('1.5'),
+        SG: toNano('1.0'),
     };
     private readonly countryDemand: Record<string, number> = {
         US: 100,
@@ -33,40 +32,26 @@ export class RewardsService {
         SG: 300,
     };
     private readonly baseMargin = 1.2;
-    private treeData: RewardsTreeData | null = null;
-    private treeDataByPeriod = new Map<number, RewardsTreeData>();
+    private rewardDataByPeriod = new Map<number, ProviderReward[]>();
 
-    constructor(
-        private readonly merkleService: MerkleService,
-        private readonly nodesService: NodesService,
-    ) {}
+    constructor(private readonly nodesService: NodesService) {}
 
-    getRewardData(periodId: number, providerAddress: string): RewardResponseDTO {
-        const data = this.treeDataByPeriod.get(periodId);
+    getRewardData(periodId: number, providerAddress: string): bigint {
+        const data = this.rewardDataByPeriod.get(periodId);
         if (!data) {
             throw new NotFoundException('No rewards for this period');
         }
 
         const provider = Address.parse(providerAddress);
-        const index = data.rewards.findIndex((reward) =>
-            Address.parse(reward.address).equals(provider),
+        const index = data.findIndex((reward) =>
+            reward.address.equals(provider),
         );
 
         if (index === -1) {
             throw new NotFoundException('No rewards for this address');
         }
 
-        const proofHashes = this.merkleService.getProofHashes(data.tree, index);
-        const proofCell = this.merkleService.buildProofCell(proofHashes);
-
-        return {
-            periodId: data.periodId,
-            amount: data.rewards[index].amount,
-            formulaVersion: data.formulaVersion,
-            snapshotHash: `0x${data.snapshotHash}`,
-            root: `0x${data.root}`,
-            proofCellBoc: proofCell.toBoc().toString('base64'),
-        };
+        return data[index].amount;
     }
 
     getProviderNodesWithWeight(
@@ -97,31 +82,33 @@ export class RewardsService {
         };
     }
 
-    async getNodesDemandData(): Promise<NodesDemandDataResponseDTO[]> {
-        const providers = await this.nodesService.getNodeProviders();
-        
+    async getNodesDemandData(): Promise<NodesDemand[]> {
+        const providers = this.nodesService.getNodeProviders();
+
         const nodeCountByCountry: Record<string, number> = {};
-        
-        providers.forEach(provider => {
-            provider.nodes.forEach(node => {
+
+        providers.forEach((provider) => {
+            provider.nodes.forEach((node) => {
                 const country = node.country;
-                nodeCountByCountry[country] = (nodeCountByCountry[country] || 0) + 1;
+                nodeCountByCountry[country] =
+                    (nodeCountByCountry[country] || 0) + 1;
             });
         });
 
         return Object.keys(this.countryDemand).map((country) => {
             const demand = this.countryDemand[country];
             const activeNodes = nodeCountByCountry[country] || 0;
-            const cost = this.countryBaseCost[country] || 0;
+            const cost = this.countryBaseCost[country] || 0n;
 
             /**
              * Расчет Saturation (Насыщенности):
              * Чем больше нод относительно спроса, тем выше процент.
              * Ограничиваем 100%, если нод стало больше, чем нужно.
              */
-            const saturation = demand > 0 
-                ? Math.min(Math.round((activeNodes / demand) * 100), 100)
-                : 0;
+            const saturation =
+                demand > 0
+                    ? Math.min(Math.round((activeNodes / demand) * 100), 100)
+                    : 0;
 
             return {
                 country,
@@ -132,61 +119,35 @@ export class RewardsService {
         });
     }
 
-    async updateMonthlyRewards(input: UpdateMonthlyRewardsInput): Promise<string> {
-        const calculation = this.calculateRewardsFromNodes(input.totalReward);
-        const rewards: ProviderReward[] = calculation.providers.map((provider) => ({
-            address: Address.parse(provider.address).toString(),
-            amount: this.toIntegerAmountString(provider.totalReward),
-        }));
-
-        if (rewards.length === 0) {
-            throw new NotFoundException('No rewards to build Merkle root');
-        }
-
-        const snapshotHashBigInt = BigInt(input.snapshotHash);
-        const leaves = rewards.map((reward) =>
-            this.merkleService.hashLeaf({
-                rewardDistributorAddress: input.rewardDistributorAddress,
-                periodId: input.periodId,
-                claimerAddress: reward.address,
-                amount: BigInt(reward.amount),
-                formulaVersion: input.formulaVersion,
-                snapshotHash: snapshotHashBigInt,
+    async calculateMonthlyRewards(
+        input: UpdateMonthlyRewardsInput,
+    ): Promise<ProviderReward[]> {
+        const calculation = this.calculateRewardsFromNodes(input.totalPool);
+        const rewards: ProviderReward[] = calculation.providers.map(
+            (provider) => ({
+                address: Address.parse(provider.address),
+                amount: BigInt(provider.totalReward),
+                isClaimed: false,
             }),
         );
 
-        const tree = this.merkleService.buildTree(leaves);
-        const root = tree[tree.length - 1][0].toString('hex');
-
-        this.treeDataByPeriod.set(input.periodId, {
-            periodId: input.periodId,
-            formulaVersion: input.formulaVersion,
-            snapshotHash: snapshotHashBigInt.toString(16),
-            rewardDistributorAddress: Address.parse(input.rewardDistributorAddress).toString(),
-            root,
-            tree,
-            rewards,
-        });
-
-        return `0x${root}`;
-    }
-
-    private toIntegerAmountString(value: number): string {
-        if (!Number.isFinite(value)) {
-            throw new Error('Invalid reward amount');
+        if (rewards.length === 0) {
+            throw new NotFoundException('No rewards');
         }
 
-        return Math.round(value).toString();
+        this.rewardDataByPeriod.set(input.periodId, rewards);
+
+        return rewards;
     }
 
-    calculateRewards(
+    private calculateRewards(
         nodeProviders: NodeProvider[],
-        totalReward: number,
+        totalPool: bigint,
     ): RewardsCalculationResult {
         const allNodes = this.getAllNodes(nodeProviders);
-        
+
         if (allNodes.length === 0) {
-            return this.buildEmptyRewardsResult(totalReward);
+            return this.buildEmptyRewardsResult(totalPool);
         }
 
         // 1) Base rewards and total base sum
@@ -195,7 +156,7 @@ export class RewardsService {
         // 2) Remaining pool for performance rewards (or scale base down)
         const { baseScale, perfPool } = this.calculatePerfPool(
             baseSum,
-            totalReward,
+            totalPool,
         );
 
         // 3) Node weights for performance distribution
@@ -206,10 +167,10 @@ export class RewardsService {
         );
 
         // 4) If all weights are zero, split perfPool evenly
-        const equalPerfReward =
-            totalWeight === 0 ? perfPool / allNodes.length : 0;
+        /* const equalPerfReward =
+            totalWeight === 0 ? perfPool / allNodes.length : 0; */
 
-        const providers = nodeProviders.map((provider) =>
+        let providers = nodeProviders.map((provider) =>
             this.buildProviderRewards(
                 provider,
                 baseRewardsByNodeId,
@@ -217,33 +178,71 @@ export class RewardsService {
                 weightsByNodeId,
                 totalWeight,
                 perfPool,
-                equalPerfReward,
             ),
         );
 
+        providers = this.distributeRemainder(providers, Number(totalPool));
+
+        providers.forEach((p) => {
+            this.distributeRemainder(p.nodes, p.totalReward);
+        });
+
         return {
-            totalReward,
-            baseSum: baseSum * baseScale,
+            totalPool,
+            baseSum: BigInt(Math.floor(baseSum * baseScale)),
             perfPool,
             totalWeight,
             providers,
         };
     }
 
-    calculateRewardsFromNodes(totalReward: number): RewardsCalculationResult {
+    calculateRewardsFromNodes(totalPool: bigint): RewardsCalculationResult {
         return this.calculateRewards(
             this.nodesService.getNodeProviders(),
-            totalReward,
+            totalPool,
         );
     }
 
+    private distributeRemainder<T extends { totalReward: number }>(
+        items: T[],
+        totalAmount: number,
+    ): T[] {
+        if (items.length === 0) return items;
+
+        const totalBigInt = BigInt(Math.round(totalAmount));
+
+        let currentSum = 0n;
+        const withMetadata = items.map((item) => {
+            const floorVal = BigInt(Math.floor(item.totalReward));
+            const fraction = item.totalReward - Math.floor(item.totalReward);
+
+            currentSum += floorVal;
+
+            return { item, floorVal, fraction };
+        });
+
+        let remainder = totalBigInt - currentSum;
+
+        withMetadata.sort((a, b) => b.fraction - a.fraction);
+
+        for (let i = 0; i < Number(remainder); i++) {
+            withMetadata[i % withMetadata.length].floorVal += 1n;
+        }
+
+        // 5. Записываем целые значения обратно в объекты
+        return withMetadata.map((m) => {
+            m.item.totalReward = Number(m.floorVal);
+            return m.item;
+        });
+    }
+
     private buildEmptyRewardsResult(
-        totalReward: number,
+        totalPool: bigint,
     ): RewardsCalculationResult {
         return {
-            totalReward,
-            baseSum: 0,
-            perfPool: 0,
+            totalPool,
+            baseSum: 0n,
+            perfPool: 0n,
             totalWeight: 0,
             providers: [],
         };
@@ -267,16 +266,25 @@ export class RewardsService {
         return { baseRewardsByNodeId, baseSum };
     }
 
-    private calculatePerfPool(baseSum: number, totalReward: number): PerfPoolResult {
-        if (baseSum < totalReward) {
-            return { baseScale: 1, perfPool: totalReward - baseSum };
-        }
+    private calculatePerfPool(
+        baseSum: number,
+        totalPool: bigint,
+    ): PerfPoolResult {
+        const totalNum = Number(totalPool);
 
-        if (baseSum > 0) {
-            return { baseScale: totalReward / baseSum, perfPool: 0 };
+        if (baseSum <= totalNum) {
+            // Денег хватает: база 100%, остаток в бонусный пул
+            return {
+                baseScale: 1.0,
+                perfPool: totalPool - BigInt(Math.floor(baseSum)),
+            };
+        } else {
+            // Денег мало: режем базу пропорционально, бонусов нет
+            return {
+                baseScale: baseSum > 0 ? totalNum / baseSum : 1.0,
+                perfPool: 0n,
+            };
         }
-
-        return { baseScale: 1, perfPool: 0 };
     }
 
     private calculateWeights(
@@ -302,17 +310,14 @@ export class RewardsService {
         baseScale: number,
         weightsByNodeId: Map<number, number>,
         totalWeight: number,
-        perfPool: number,
-        equalPerfReward: number,
+        perfPool: bigint,
     ): ProviderRewardResult {
         const nodes = provider.nodes.map((node) => {
             const baseReward =
                 (baseRewardsByNodeId.get(node.id) ?? 0) * baseScale;
             const weight = weightsByNodeId.get(node.id) ?? 0;
-            const performanceReward =
-                totalWeight > 0
-                    ? perfPool * (weight / totalWeight)
-                    : equalPerfReward;
+            const perfShare = totalWeight > 0 ? weight / totalWeight : 0;
+            const performanceReward = Number(perfPool) * perfShare;
 
             return {
                 nodeId: node.id,
@@ -337,9 +342,9 @@ export class RewardsService {
     }
 
     private calculateBaseReward(node: Node): number {
-        const baseCost = this.countryBaseCost[node.country] ?? 1.0;
-        
-        return baseCost * this.baseMargin;
+        const baseCost = this.countryBaseCost[node.country] ?? toNano('1.0');
+
+        return Number(baseCost) * this.baseMargin;
     }
 
     private getCountryNodeCounts(nodes: Node[]): CountryNodeCounts {
@@ -356,24 +361,26 @@ export class RewardsService {
         node: Node,
         countryNodeCounts: CountryNodeCounts,
     ): number {
-        // Presence + quality, adjusted by location, uptime, and rating penalty
-        const presenceScore = 0.1;
-        const effectiveRating = node.reviewsCount === 0 ? 4.0 : node.rating;
+        const presenceScore = 0.15;
+        const effectiveRating = node.reviewsCount === 0 ? 3.0 : node.rating;
         const ratingFactor = Math.pow(effectiveRating / 5.0, 2);
 
-        const qualityScore = (0.1 * Math.log(node.tickets + 1)) * ratingFactor;
+        const qualityScore = 0.1 * Math.log(node.tickets + 1);
 
         const countryDemand = this.countryDemand[node.country] ?? 100;
         const countryExisting = countryNodeCounts[node.country] ?? 0;
         const demandFactor = countryDemand / (countryExisting + 1);
-        const locationMultiplier = 1 + (0.2 * Math.log(demandFactor + 1));
+        const locationMultiplier = Math.min(
+            1 + 0.5 * Math.log(demandFactor + 1),
+            2.5,
+        );
 
-        const safeUptime = Math.max(0, node.uptime);
+        const uptimeFactor = Math.pow(Math.max(0, node.uptime), 2);
 
         return (
             (presenceScore + qualityScore) *
             locationMultiplier *
-            safeUptime *
+            uptimeFactor *
             ratingFactor
         );
     }
