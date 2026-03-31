@@ -39,15 +39,26 @@ export class TonService {
     async waitForTransaction(callback: () => Promise<void>) {
         const oldSeqno = await this.getSeqno();
 
-        callback();
+        await callback();
         this._logger.log('Waiting for transaction...');
 
-        let currentSeqno = await this.getSeqno();
+        let currentSeqno = oldSeqno;
+        let attempts = 0;
+        const maxAttempts = 20;
 
-        while (currentSeqno <= oldSeqno) {
+        while (currentSeqno <= oldSeqno && attempts < maxAttempts) {
             await new Promise((resolve) => setTimeout(resolve, 3000));
             currentSeqno = await this.getSeqno();
+            attempts++;
         }
+
+        if (currentSeqno <= oldSeqno) {
+            throw new InternalServerErrorException(
+                'Transaction timeout or failed to update seqno',
+            );
+        }
+
+        return await this.checkLastTransactionStatus();
     }
 
     async getSeqno(): Promise<number> {
@@ -118,5 +129,45 @@ export class TonService {
                 }),
             );
         }
+    }
+
+    private async checkLastTransactionStatus() {
+        const transactions = await this._client.getTransactions(
+            this._walletContract.address,
+            {
+                limit: 1,
+            },
+        );
+
+        if (transactions.length === 0) {
+            throw new InternalServerErrorException(
+                'No transactions found for this wallet',
+            );
+        }
+
+        const lastTx = transactions[0];
+        const description = lastTx.description;
+
+        if (description.type === 'generic') {
+            const computePhase = description.computePhase;
+
+            if (computePhase.type === 'vm' && computePhase.exitCode !== 0) {
+                this._logger.error(
+                    `Transaction failed with exit code: ${computePhase.exitCode}`,
+                );
+                throw new InternalServerErrorException(
+                    `Blockchain transaction failed (exit code: ${computePhase.exitCode})`,
+                );
+            }
+
+            if (computePhase.type === 'skipped') {
+                throw new InternalServerErrorException(
+                    `Transaction skipped: ${computePhase.reason}`,
+                );
+            }
+        }
+
+        this._logger.log('Transaction confirmed successfully');
+        return lastTx;
     }
 }

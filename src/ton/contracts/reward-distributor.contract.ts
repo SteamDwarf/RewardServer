@@ -71,20 +71,27 @@ class RewardDistributor implements Contract {
         sender: Sender,
         providers: Address[],
     ) {
+        // Keep only low 32 bits so (queryId << 32) fits into uint64 on-chain
+        const queryId = getRandomQueryId() & 0xffffffffn;
         const providersDict = Dictionary.empty(
             Dictionary.Keys.BigInt(257),
             Dictionary.Values.Address(),
         );
 
         providers.forEach((p, i) => {
-            providersDict.set(BigInt(i), p);
+            const id = BigInt(i);
+            const combinedQueryId = (queryId << 32n) | (id & 0xffffffffn);
+            console.log(
+                `sendRewardToProvider: queryId=${queryId} id=${id} combined=${combinedQueryId}`,
+            );
+            providersDict.set(id, p);
         });
 
         console.log(providersDict);
 
         const body = beginCell()
             .storeUint(3709138512, 32)
-            .storeUint(getRandomQueryId(), 64)
+            .storeUint(queryId, 64)
             .storeDict(providersDict)
             .storeUint(providers.length, 32)
             .endCell();
