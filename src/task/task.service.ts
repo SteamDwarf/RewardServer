@@ -148,12 +148,12 @@ export class TaskService {
         const rewardPool = await rewardDistributor.getRewardPool();
 
         const rewards = await this._rewardService.calculateMonthlyRewards({
-            periodId: 1,
+            periodId: 3,
             totalPool: rewardPool,
         });
 
         await this._tonService.waitForTransaction(async () => {
-            await rewardDistributor.sendRewardsInfo(sender, 1n, rewards);
+            await rewardDistributor.sendRewardsInfo(sender, 3n, rewards);
         });
     }
 

@@ -10,8 +10,7 @@ export class NodesService {
         this.nodeProviders = [
             {
                 name: 'Atlas Nodes',
-                address:
-                    '0:e839e5a22cec5f2370adfbb0a4d713f0479d9861938ed9e2e31abd85244ad58e',
+                address: '0QAQTz4MOMICy3mT9cg_wfgTkLXMIFhFDeTiKJPs0IpjWETa',
                 nodes: [
                     {
                         id: 101,
@@ -57,8 +56,7 @@ export class NodesService {
             },
             {
                 name: 'Nordic Host',
-                address:
-                    '0:603ad3f8c87c882c3f096edcada7a55ca78cbca5f1c7b8cc9f6d701d2b52dc1a',
+                address: '0QCE-RicEBmEsMlp14ippkeBPzBi4KmmlsqdezExSWPOGmU-',
                 nodes: [
                     {
                         id: 201,
@@ -104,8 +102,7 @@ export class NodesService {
             },
             {
                 name: 'Aurora Cloud',
-                address:
-                    '0:61b08125a26d5004862d31c62fb87dd6428c91545dcffc38ced63a95653a9eca',
+                address: '0QCDDw3yO4UWGIX1pHZm-hTUhpmh7iYOldlBCre86DTgMkVo',
                 nodes: [
                     {
                         id: 301,

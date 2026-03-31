@@ -97,7 +97,7 @@ class RewardDistributor implements Contract {
             .endCell();
 
         return provider.internal(sender, {
-            value: MESSAGES_FEE.SET_REWARDS * BigInt(providers.length),
+            value: MESSAGES_FEE.SEND_REWARD * BigInt(providers.length),
             bounce: true,
             body,
         });

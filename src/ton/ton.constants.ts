@@ -25,6 +25,7 @@ export const CONTRACTS_IDS: Record<CONTRACTS, bigint> = {
 export const MESSAGES_FEE = {
     SEND_JETTONS: toNano('0.2'),
     SET_REWARDS: toNano('0.2'),
+    SEND_REWARD: toNano('0.2'),
 
     /* DEPLOY: toNano('0.1'),
     BIND: toNano('0.1'),
