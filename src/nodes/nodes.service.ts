@@ -10,7 +10,7 @@ export class NodesService {
         this.nodeProviders = [
             {
                 name: 'Atlas Nodes',
-                address: '0QAQTz4MOMICy3mT9cg_wfgTkLXMIFhFDeTiKJPs0IpjWETa',
+                address: '0QB7PgjX66DGBfkOhwMV7h0haCP0FTEYc8aoSC6h5Y4MgHTR',
                 nodes: [
                     {
                         id: 101,
