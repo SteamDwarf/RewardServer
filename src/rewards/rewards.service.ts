@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Address, toNano } from '@ton/core';
-import { MerkleService } from 'src/merkle/merkle.service';
 import { NodesService } from 'src/nodes/nodes.service';
 import { Node, NodeProvider } from 'src/nodes/types/nodes.types';
 import { ProviderNodesWithWeightResponseDTO } from './dto/providerNodesWithWeightResponse.dto';

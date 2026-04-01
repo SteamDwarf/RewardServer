@@ -148,14 +148,15 @@ describe('TaskService', () => {
         expect(rootContract.getAddressFromRoot).toHaveBeenCalledWith(
             CONTRACTS_IDS.VPNProviderRegistry,
         );
-        expect(vpnProviderRegistryContract.sendJettonsToPool).toHaveBeenCalledWith(
-            sender,
-            250n,
-        );
+        expect(
+            vpnProviderRegistryContract.sendJettonsToPool,
+        ).toHaveBeenCalledWith(sender, 250n);
         expect(tonService.waitForTransaction).toHaveBeenCalledTimes(1);
         expect(rewardsService.calculateMonthlyRewards).not.toHaveBeenCalled();
         expect(rewardDistributorContract.getRewardPool).not.toHaveBeenCalled();
-        expect(rewardDistributorContract.sendRewardsInfo).not.toHaveBeenCalled();
+        expect(
+            rewardDistributorContract.sendRewardsInfo,
+        ).not.toHaveBeenCalled();
         expect(
             rewardDistributorContract.sendRewardToProvider,
         ).not.toHaveBeenCalled();
@@ -217,10 +218,9 @@ describe('TaskService', () => {
             2,
             CONTRACTS_IDS.RewardDistributor,
         );
-        expect(vpnProviderRegistryContract.sendJettonsToPool).toHaveBeenCalledWith(
-            sender,
-            500n,
-        );
+        expect(
+            vpnProviderRegistryContract.sendJettonsToPool,
+        ).toHaveBeenCalledWith(sender, 500n);
         expect(rewardsService.calculateMonthlyRewards).toHaveBeenCalledWith({
             periodId: 3,
             totalPool: 100n,

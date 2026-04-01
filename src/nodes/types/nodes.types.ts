@@ -1,5 +1,3 @@
-import { Address } from '@ton/core';
-
 export interface NodeProvider {
     name: string;
     address: string;

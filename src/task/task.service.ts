@@ -22,7 +22,7 @@ export class TaskService {
         private readonly _configService: ConfigService<EnvVariables>,
     ) {}
 
-    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    //@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async handleDailyJettonTransfer() {
         const rootAddress = this._configService.get('root', {
             infer: true,

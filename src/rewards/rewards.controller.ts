@@ -9,7 +9,6 @@ import {
 import { ProviderNodesWithWeightResponseDTO } from './dto/providerNodesWithWeightResponse.dto';
 import { RewardsService } from './rewards.service';
 import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
-import { ProviderReward } from './types/rewards.types';
 import { fromNano } from '@ton/core';
 import { CalculateMonthlyRewardsDTO } from './dto/rewardsCalculationResponse.dto';
 import { ProviderRewardResponseDTO } from './dto/providerRewardResponse.dto';
@@ -35,7 +34,7 @@ export class RewardsController {
         }));
     }
 
-    @Post('update')
+    /* @Post('update')
     async calculateMonthlyRewards(
         @Query('totalPool') totalPool: string,
         @Query('periodId') periodId: string,
@@ -62,7 +61,7 @@ export class RewardsController {
             address: r.address.toString(),
             amount: fromNano(r.amount),
         }));
-    }
+    } */
 
     @Get(':provider')
     async getRewardData(

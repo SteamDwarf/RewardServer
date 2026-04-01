@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RewardsService } from './rewards.service';
-import { MerkleService } from 'src/merkle/merkle.service';
 import { NodesService } from 'src/nodes/nodes.service';
-import { NotFoundException } from '@nestjs/common';
 import { Address, toNano } from '@ton/core';
 
 describe('RewardsService', () => {
@@ -26,7 +24,6 @@ describe('RewardsService', () => {
             providers: [
                 RewardsService,
                 { provide: NodesService, useValue: mockNodesService },
-                { provide: MerkleService, useValue: mockMerkleService },
             ],
         }).compile();
 

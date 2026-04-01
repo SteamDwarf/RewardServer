@@ -7,7 +7,7 @@ import { RewardInfo } from 'src/rewards/types/rewards.types';
 export class TaskController {
     constructor(private readonly taskService: TaskService) {}
 
-    @Post('send-jettons')
+    /* @Post('send-jettons')
     async runTask() {
         await this.taskService.sendJettonsTooPoolRoute();
 
@@ -49,5 +49,5 @@ export class TaskController {
         });
 
         return rewardsArray;
-    }
+    } */
 }

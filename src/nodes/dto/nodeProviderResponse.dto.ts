@@ -1,5 +1,4 @@
-import {Node} from '../types/nodes.types';
-
+import { Node } from '../types/nodes.types';
 
 export interface NodeProviderResponseDTO {
     name: string;
