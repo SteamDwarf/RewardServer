@@ -1,5 +1,6 @@
 export interface NodeProvider {
     name: string;
+    owner: string;
     address: string;
     nodes: Node[];
 }

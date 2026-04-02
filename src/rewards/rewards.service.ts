@@ -125,6 +125,7 @@ export class RewardsService {
         const rewards: ProviderReward[] = calculation.providers.map(
             (provider) => ({
                 address: Address.parse(provider.address),
+                owner: Address.parse(provider.owner),
                 amount: BigInt(provider.totalReward),
                 isClaimed: false,
             }),
@@ -356,6 +357,7 @@ export class RewardsService {
         );
 
         return {
+            owner: provider.owner,
             address: provider.address,
             totalReward: totalProviderReward,
             nodes,

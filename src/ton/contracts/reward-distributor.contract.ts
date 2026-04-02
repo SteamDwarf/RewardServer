@@ -49,7 +49,7 @@ class RewardDistributor implements Contract {
         );
 
         rewards.forEach((r) => {
-            dict.set(r.address, r);
+            dict.set(r.owner, r);
         });
 
         const body = beginCell()

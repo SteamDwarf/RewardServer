@@ -15,6 +15,7 @@ export interface RewardInfo {
 
 export interface ProviderReward extends RewardInfo {
     address: Address;
+    owner: Address;
 }
 
 export interface NodeRewardResult {
@@ -27,6 +28,7 @@ export interface NodeRewardResult {
 }
 
 export interface ProviderRewardResult {
+    owner: string;
     address: string;
     totalReward: number;
     nodes: NodeRewardResult[];

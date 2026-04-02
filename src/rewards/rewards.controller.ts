@@ -67,6 +67,7 @@ export class RewardsController {
         return rewards.map((r) => ({
             ...r,
             address: r.address.toString(),
+            owner: r.owner.toString(),
             amount: fromNano(r.amount),
         }));
     } */

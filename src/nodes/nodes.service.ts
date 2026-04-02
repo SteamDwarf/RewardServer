@@ -9,8 +9,9 @@ export class NodesService {
     constructor() {
         this.nodeProviders = [
             {
-                name: 'Atlas Nodes',
-                address: '0QB7PgjX66DGBfkOhwMV7h0haCP0FTEYc8aoSC6h5Y4MgHTR',
+                name: 'Dmitriy',
+                address: 'EQDAklR_5QOxqCWII2mRf3_AZlQH_hAM8Q8M37YXoxK_Cyc0',
+                owner: 'EQB7PgjX66DGBfkOhwMV7h0haCP0FTEYc8aoSC6h5Y4MgJKe',
                 nodes: [
                     {
                         id: 101,
@@ -55,8 +56,9 @@ export class NodesService {
                 ],
             },
             {
-                name: 'Nordic Host',
-                address: '0QCE-RicEBmEsMlp14ippkeBPzBi4KmmlsqdezExSWPOGmU-',
+                name: 'apiVPN',
+                address: 'EQBZ-TSf-HFUAbZtv3JtpGRwRtMsMm7HQsTJV-gMcb3scHbG',
+                owner: 'EQCD4tkrxmGcQ7ww3BYcD59-YOt4udc2zVnFVCmxM3fkAoqv',
                 nodes: [
                     {
                         id: 201,
@@ -101,8 +103,9 @@ export class NodesService {
                 ],
             },
             {
-                name: 'Aurora Cloud',
-                address: '0QCDDw3yO4UWGIX1pHZm-hTUhpmh7iYOldlBCre86DTgMkVo',
+                name: 'node tlst02',
+                address: 'EQAQ81Bkgo78leogCL5lguUNjH2V1qha9xbYUrawIB4wLKST',
+                owner: 'EQC394rp_XbLMOmUyESLjKIgBK-8RvEboUm8HPi7U78eMliZ',
                 nodes: [
                     {
                         id: 301,

@@ -11,6 +11,7 @@ export class NodesController {
         return this.nodesService.getNodeProviders().map((provider) => ({
             name: provider.name,
             address: provider.address,
+            owner: provider.owner,
             nodes: provider.nodes.map((node) => ({
                 id: node.id,
                 country: node.country,
