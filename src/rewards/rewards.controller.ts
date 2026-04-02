@@ -12,6 +12,7 @@ import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
 import { fromNano } from '@ton/core';
 import { CalculateMonthlyRewardsDTO } from './dto/rewardsCalculationResponse.dto';
 import { ProviderRewardResponseDTO } from './dto/providerRewardResponse.dto';
+import { ProviderWeightsResponseDTO } from './dto/providerWeightsResponse.dto';
 
 @Controller('rewards')
 export class RewardsController {
@@ -22,6 +23,13 @@ export class RewardsController {
         @Param('address') address: string,
     ): ProviderNodesWithWeightResponseDTO {
         return this.rewardsService.getProviderNodesWithWeight(address);
+    }
+
+    @Get('provider-weights/:address')
+    getProviderWeights(
+        @Param('address') address: string,
+    ): ProviderWeightsResponseDTO {
+        return this.rewardsService.calculateProviderWeights(address);
     }
 
     @Get('nodes-demand')

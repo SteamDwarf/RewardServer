@@ -139,6 +139,35 @@ export class RewardsService {
         return rewards;
     }
 
+    calculateProviderWeights(address: string) {
+        const nodeProvider = this.nodesService.getProviderByAddress(address);
+
+        if (!nodeProvider) {
+            throw new NotFoundException('Provider not found');
+        }
+
+        const allNodes = this.getAllNodes(this.nodesService.getNodeProviders());
+        const countryNodeCounts = this.getCountryNodeCounts(allNodes);
+
+        const weights = nodeProvider.nodes.map((node) =>
+            this.calculateNodeWeight(node, countryNodeCounts),
+        );
+        const weightsSum = weights.reduce((sum, w) => (sum += w));
+        const averageWeight = weightsSum / weights.length;
+
+        return {
+            weightsSum,
+            averageWeight,
+        };
+    }
+
+    calculateRewardsFromNodes(totalPool: bigint): RewardsCalculationResult {
+        return this.calculateRewards(
+            this.nodesService.getNodeProviders(),
+            totalPool,
+        );
+    }
+
     private calculateRewards(
         nodeProviders: NodeProvider[],
         totalPool: bigint,
@@ -193,13 +222,6 @@ export class RewardsService {
             totalWeight,
             providers,
         };
-    }
-
-    calculateRewardsFromNodes(totalPool: bigint): RewardsCalculationResult {
-        return this.calculateRewards(
-            this.nodesService.getNodeProviders(),
-            totalPool,
-        );
     }
 
     private distributeRemainder<T extends { totalReward: number }>(
