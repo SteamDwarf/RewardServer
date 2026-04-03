@@ -8,7 +8,6 @@ import { ConfigModule } from '@nestjs/config';
 import configuration from './configuration';
 import { validationSchema } from './config.schema';
 import { TaskService } from './task/task.service';
-import { TaskController } from './task/task.controller';
 import { DbService } from './db/db.service';
 import { DbModule } from './db/db.module';
 import { ApiController } from './api/api.controller';
@@ -27,7 +26,7 @@ import { ApiModule } from './api/api.module';
         DbModule,
         ApiModule,
     ],
-    controllers: [AppController, TaskController, ApiController],
+    controllers: [AppController, ApiController],
     providers: [AppService, TonService, TaskService, DbService],
 })
 export class AppModule {}
