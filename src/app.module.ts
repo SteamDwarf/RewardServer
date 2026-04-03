@@ -9,6 +9,10 @@ import configuration from './configuration';
 import { validationSchema } from './config.schema';
 import { TaskService } from './task/task.service';
 import { TaskController } from './task/task.controller';
+import { DbService } from './db/db.service';
+import { DbModule } from './db/db.module';
+import { ApiController } from './api/api.controller';
+import { ApiModule } from './api/api.module';
 
 @Module({
     imports: [
@@ -20,8 +24,10 @@ import { TaskController } from './task/task.controller';
         }),
         RewardsModule,
         NodesModule,
+        DbModule,
+        ApiModule,
     ],
-    controllers: [AppController, TaskController],
-    providers: [AppService, TonService, TaskService],
+    controllers: [AppController, TaskController, ApiController],
+    providers: [AppService, TonService, TaskService, DbService],
 })
 export class AppModule {}

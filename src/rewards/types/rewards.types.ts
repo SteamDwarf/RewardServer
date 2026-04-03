@@ -1,12 +1,6 @@
 import { Address } from '@ton/core';
 import { Node } from '../../nodes/types/nodes.types';
 
-export class NodesDemand {
-    country: string;
-    cost: bigint;
-    demand: number;
-    saturation: number;
-}
 
 export interface RewardInfo {
     amount: bigint;

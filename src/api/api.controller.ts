@@ -1,11 +1,36 @@
-import { Controller, Get, Post } from '@nestjs/common';
-import { TaskService } from './task.service';
-import { Address, Dictionary, fromNano } from '@ton/core';
-import { RewardInfo } from 'src/rewards/types/rewards.types';
+import { Controller, Get, Param } from '@nestjs/common';
+import { NodesService } from 'src/nodes/nodes.service';
+import { NodeProviderResponseDTO } from './dto/nodeProviderResponse.dto';
+import { fromNano } from '@ton/core';
+import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
 
-@Controller('task')
-export class TaskController {
-    constructor(private readonly taskService: TaskService) {}
+@Controller('api')
+export class ApiController {
+    constructor(private readonly nodesService: NodesService) {}
+
+    @Get('providers')
+    async getProviders(): Promise<NodeProviderResponseDTO[]> {
+        return this.nodesService.getNodeProviders();
+    }
+
+    @Get('providers/:address')
+    async getProviderByAddress(
+        @Param('address') address: string,
+    ): Promise<NodeProviderResponseDTO | undefined> {
+        const provider = await this.nodesService.getProviderByAddress(address);
+
+        return provider;
+    }
+
+    @Get('nodes-demand')
+    async getNodesDemand(): Promise<NodesDemandDataResponseDTO[]> {
+        const demand = await this.nodesService.getNodesDemandData();
+
+        return demand.map((d) => ({
+            ...d,
+            cost: fromNano(d.cost),
+        }));
+    }
 
     /* @Post('send-jettons')
     async runTask() {

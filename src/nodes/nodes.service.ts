@@ -1,164 +1,57 @@
 import { Injectable } from '@nestjs/common';
-import { NodeProvider } from './types/nodes.types';
-import { Address } from '@ton/core';
+import { NodeProvider, NodesDemand } from './types/nodes.types';
+import { DbService } from 'src/db/db.service';
 
 @Injectable()
 export class NodesService {
-    nodeProviders: NodeProvider[];
+    constructor(private readonly db: DbService) {}
 
-    constructor() {
-        this.nodeProviders = [
-            {
-                name: 'Dmitriy',
-                address: 'EQDAklR_5QOxqCWII2mRf3_AZlQH_hAM8Q8M37YXoxK_Cyc0',
-                owner: 'EQB7PgjX66DGBfkOhwMV7h0haCP0FTEYc8aoSC6h5Y4MgJKe',
-                nodes: [
-                    {
-                        id: 101,
-                        country: 'US',
-                        rating: 4.8,
-                        reviewsCount: 128,
-                        tickets: 0,
-                        uptime: 0.99,
-                    },
-                    {
-                        id: 102,
-                        country: 'DE',
-                        rating: 3.2,
-                        reviewsCount: 41,
-                        tickets: 7,
-                        uptime: 0.92,
-                    },
-                    {
-                        id: 103,
-                        country: 'FR',
-                        rating: 1.1,
-                        reviewsCount: 12,
-                        tickets: 23,
-                        uptime: 0.64,
-                    },
-                    {
-                        id: 104,
-                        country: 'SG',
-                        rating: 0,
-                        reviewsCount: 0,
-                        tickets: 6,
-                        uptime: 0.91,
-                    },
-                    {
-                        id: 105,
-                        country: 'US',
-                        rating: 2.4,
-                        reviewsCount: 19,
-                        tickets: 14,
-                        uptime: 0.73,
-                    },
-                ],
-            },
-            {
-                name: 'apiVPN',
-                address: 'EQBZ-TSf-HFUAbZtv3JtpGRwRtMsMm7HQsTJV-gMcb3scHbG',
-                owner: 'EQCD4tkrxmGcQ7ww3BYcD59-YOt4udc2zVnFVCmxM3fkAoqv',
-                nodes: [
-                    {
-                        id: 201,
-                        country: 'DE',
-                        rating: 4.9,
-                        reviewsCount: 210,
-                        tickets: 1,
-                        uptime: 0.997,
-                    },
-                    {
-                        id: 202,
-                        country: 'FR',
-                        rating: 2.0,
-                        reviewsCount: 33,
-                        tickets: 18,
-                        uptime: 0.81,
-                    },
-                    {
-                        id: 203,
-                        country: 'US',
-                        rating: 3.7,
-                        reviewsCount: 58,
-                        tickets: 0,
-                        uptime: 0.95,
-                    },
-                    {
-                        id: 204,
-                        country: 'SG',
-                        rating: 0,
-                        reviewsCount: 0,
-                        tickets: 27,
-                        uptime: 0.52,
-                    },
-                    {
-                        id: 205,
-                        country: 'DE',
-                        rating: 4.0,
-                        reviewsCount: 44,
-                        tickets: 5,
-                        uptime: 0.9,
-                    },
-                ],
-            },
-            {
-                name: 'node tlst02',
-                address: 'EQAQ81Bkgo78leogCL5lguUNjH2V1qha9xbYUrawIB4wLKST',
-                owner: 'EQC394rp_XbLMOmUyESLjKIgBK-8RvEboUm8HPi7U78eMliZ',
-                nodes: [
-                    {
-                        id: 301,
-                        country: 'FR',
-                        rating: 4.3,
-                        reviewsCount: 97,
-                        tickets: 3,
-                        uptime: 0.93,
-                    },
-                    {
-                        id: 302,
-                        country: 'US',
-                        rating: 1.8,
-                        reviewsCount: 21,
-                        tickets: 20,
-                        uptime: 0.78,
-                    },
-                    {
-                        id: 303,
-                        country: 'DE',
-                        rating: 3.9,
-                        reviewsCount: 63,
-                        tickets: 0,
-                        uptime: 0.96,
-                    },
-                    {
-                        id: 304,
-                        country: 'SG',
-                        rating: 2.7,
-                        reviewsCount: 34,
-                        tickets: 12,
-                        uptime: 0.7,
-                    },
-                    {
-                        id: 305,
-                        country: 'US',
-                        rating: 4.6,
-                        reviewsCount: 140,
-                        tickets: 4,
-                        uptime: 0.985,
-                    },
-                ],
-            },
-        ];
+    async getNodeProviders(): Promise<NodeProvider[]> {
+        return this.db.findAllProviders();
     }
 
-    getNodeProviders(): NodeProvider[] {
-        return this.nodeProviders;
+    async getProviderByAddress(
+        address: string,
+    ): Promise<NodeProvider | undefined> {
+        return this.db.findProviderByAddress(address);
     }
 
-    getProviderByAddress(address: string): NodeProvider | undefined {
-        return this.nodeProviders.find((p) =>
-            Address.parse(p.address).equals(Address.parse(address)),
-        );
+    async getNodesDemandData(): Promise<NodesDemand[]> {
+        const providers = await this.db.findAllProviders();
+        const countriesDemand = await this.db.getCountriesDemand();
+        const countriesCost = await this.db.getCountriesBaseCost();
+
+        const nodeCountByCountry: Record<string, number> = {};
+
+        providers.forEach((provider) => {
+            provider.nodes.forEach((node) => {
+                const country = node.country;
+                nodeCountByCountry[country] =
+                    (nodeCountByCountry[country] || 0) + 1;
+            });
+        });
+
+        return Object.keys(countriesDemand).map((country) => {
+            const demand = countriesDemand[country];
+            const activeNodes = nodeCountByCountry[country] || 0;
+            const cost = countriesCost[country] || 0n;
+
+            /**
+             * Расчет Saturation (Насыщенности):
+             * Чем больше нод относительно спроса, тем выше процент.
+             * Ограничиваем 100%, если нод стало больше, чем нужно.
+             */
+            const saturation =
+                demand > 0
+                    ? Math.min(Math.round((activeNodes / demand) * 100), 100)
+                    : 0;
+
+            return {
+                country,
+                cost,
+                demand,
+                saturation,
+            };
+        });
     }
 }

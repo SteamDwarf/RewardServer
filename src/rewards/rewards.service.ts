@@ -1,39 +1,52 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+    Injectable,
+    Logger,
+    NotFoundException,
+    OnModuleInit,
+} from '@nestjs/common';
 import { Address, toNano } from '@ton/core';
 import { NodesService } from 'src/nodes/nodes.service';
 import { Node, NodeProvider } from 'src/nodes/types/nodes.types';
-import { ProviderNodesWithWeightResponseDTO } from './dto/providerNodesWithWeightResponse.dto';
+import { ProviderNodesWithWeightResponseDTO } from '../api/dto/providerNodesWithWeightResponse.dto';
 import {
-    BaseRewardsResult,
     CountryNodeCounts,
-    NodesDemand,
-    NodeWeightsResult,
     PerfPoolResult,
     ProviderReward,
     ProviderRewardResult,
     RewardsCalculationResult,
     UpdateMonthlyRewardsInput,
 } from './types/rewards.types';
-import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
+import { NodesDemandDataResponseDTO } from '../api/dto/nodesDemandDataResponse.dto';
+import { DbService } from 'src/db/db.service';
 
 @Injectable()
-export class RewardsService {
-    private readonly countryBaseCost: Record<string, bigint> = {
-        US: toNano('1.0'),
-        DE: toNano('2.0'),
-        FR: toNano('1.5'),
-        SG: toNano('1.0'),
-    };
-    private readonly countryDemand: Record<string, number> = {
-        US: 100,
-        DE: 200,
-        FR: 200,
-        SG: 300,
-    };
+export class RewardsService implements OnModuleInit {
+    private readonly _logger = new Logger(RewardsService.name);
+
     private readonly baseMargin = 1.2;
     private rewardDataByPeriod = new Map<number, ProviderReward[]>();
+    private intervalId?: NodeJS.Timeout;
 
-    constructor(private readonly nodesService: NodesService) {}
+    constructor(private readonly db: DbService) {}
+
+    //TODO
+    //@Cron(CronExpression.EVERY_10_MINUTES)
+    /* async handleCron() {
+        await this.recalculateAllWeights();
+    } */
+
+    onModuleDestroy() {
+        if (this.intervalId) clearInterval(this.intervalId);
+    }
+
+    async onModuleInit() {
+        await this.recalculateAllWeights();
+
+        this.intervalId = setInterval(
+            () => this.recalculateAllWeights(),
+            10 * 60 * 1000,
+        );
+    }
 
     getRewardData(periodId: number, providerAddress: string): bigint {
         const data = this.rewardDataByPeriod.get(periodId);
@@ -53,75 +66,12 @@ export class RewardsService {
         return data[index].amount;
     }
 
-    getProviderNodesWithWeight(
-        address: string,
-    ): ProviderNodesWithWeightResponseDTO {
-        const nodeProvider = this.nodesService.getProviderByAddress(address);
-
-        if (!nodeProvider) {
-            throw new NotFoundException('Provider not found');
-        }
-
-        const allNodes = this.getAllNodes(this.nodesService.getNodeProviders());
-        const countryNodeCounts = this.getCountryNodeCounts(allNodes);
-
-        const nodes = nodeProvider.nodes.map((node) => ({
-            id: node.id,
-            country: node.country,
-            rating: node.rating,
-            reviewsCount: node.reviewsCount,
-            tickets: node.tickets,
-            uptime: node.uptime,
-            weight: this.calculateNodeWeight(node, countryNodeCounts),
-        }));
-
-        return {
-            address: nodeProvider.address,
-            nodes,
-        };
-    }
-
-    async getNodesDemandData(): Promise<NodesDemand[]> {
-        const providers = this.nodesService.getNodeProviders();
-
-        const nodeCountByCountry: Record<string, number> = {};
-
-        providers.forEach((provider) => {
-            provider.nodes.forEach((node) => {
-                const country = node.country;
-                nodeCountByCountry[country] =
-                    (nodeCountByCountry[country] || 0) + 1;
-            });
-        });
-
-        return Object.keys(this.countryDemand).map((country) => {
-            const demand = this.countryDemand[country];
-            const activeNodes = nodeCountByCountry[country] || 0;
-            const cost = this.countryBaseCost[country] || 0n;
-
-            /**
-             * Расчет Saturation (Насыщенности):
-             * Чем больше нод относительно спроса, тем выше процент.
-             * Ограничиваем 100%, если нод стало больше, чем нужно.
-             */
-            const saturation =
-                demand > 0
-                    ? Math.min(Math.round((activeNodes / demand) * 100), 100)
-                    : 0;
-
-            return {
-                country,
-                cost,
-                demand,
-                saturation,
-            };
-        });
-    }
-
     async calculateMonthlyRewards(
         input: UpdateMonthlyRewardsInput,
     ): Promise<ProviderReward[]> {
-        const calculation = this.calculateRewardsFromNodes(input.totalPool);
+        const calculation = await this.calculateRewardsFromNodes(
+            input.totalPool,
+        );
         const rewards: ProviderReward[] = calculation.providers.map(
             (provider) => ({
                 address: Address.parse(provider.address),
@@ -140,39 +90,32 @@ export class RewardsService {
         return rewards;
     }
 
-    calculateProviderWeights(address: string) {
-        const nodeProvider = this.nodesService.getProviderByAddress(address);
+    async getProviderWeights(address: string) {
+        const provider = await this.db.findProviderByAddress(address);
 
-        if (!nodeProvider) {
-            throw new NotFoundException('Provider not found');
+        if (!provider) {
+            throw new NotFoundException(
+                'Weights not calculated yet for this provider',
+            );
         }
 
-        const allNodes = this.getAllNodes(this.nodesService.getNodeProviders());
-        const countryNodeCounts = this.getCountryNodeCounts(allNodes);
-
-        const weights = nodeProvider.nodes.map((node) =>
-            this.calculateNodeWeight(node, countryNodeCounts),
-        );
-        const weightsSum = weights.reduce((sum, w) => (sum += w));
-        const averageWeight = weightsSum / weights.length;
-
         return {
-            weightsSum,
-            averageWeight,
+            averageWeight: provider.weights.averageWeight,
+            totalWeight: provider.weights.totalWeight,
         };
     }
 
-    calculateRewardsFromNodes(totalPool: bigint): RewardsCalculationResult {
-        return this.calculateRewards(
-            this.nodesService.getNodeProviders(),
-            totalPool,
-        );
+    async calculateRewardsFromNodes(
+        totalPool: bigint,
+    ): Promise<RewardsCalculationResult> {
+        const providers = await this.db.findAllProviders();
+        return this.calculateRewards(providers, totalPool);
     }
 
-    private calculateRewards(
+    private async calculateRewards(
         nodeProviders: NodeProvider[],
         totalPool: bigint,
-    ): RewardsCalculationResult {
+    ) {
         const allNodes = this.getAllNodes(nodeProviders);
 
         if (allNodes.length === 0) {
@@ -181,7 +124,7 @@ export class RewardsService {
 
         // 1) Base rewards and total base sum
         const { baseRewardsByNodeId, baseSum } =
-            this.calculateBaseRewards(allNodes);
+            await this.calculateBaseRewards(allNodes);
         // 2) Remaining pool for performance rewards (or scale base down)
         const { baseScale, perfPool } = this.calculatePerfPool(
             baseSum,
@@ -190,7 +133,7 @@ export class RewardsService {
 
         // 3) Node weights for performance distribution
         const countryNodeCounts = this.getCountryNodeCounts(allNodes);
-        const { weightsByNodeId, totalWeight } = this.calculateWeights(
+        const { weightsByNodeId, totalWeight } = await this.calculateWeights(
             allNodes,
             countryNodeCounts,
         );
@@ -274,12 +217,12 @@ export class RewardsService {
         return nodeProviders.flatMap((provider) => provider.nodes);
     }
 
-    private calculateBaseRewards(nodes: Node[]): BaseRewardsResult {
+    private async calculateBaseRewards(nodes: Node[]) {
         const baseRewardsByNodeId = new Map<number, number>();
         let baseSum = 0;
 
         for (const node of nodes) {
-            const baseReward = this.calculateBaseReward(node);
+            const baseReward = await this.calculateBaseReward(node);
 
             baseRewardsByNodeId.set(node.id, baseReward);
             baseSum += baseReward;
@@ -309,21 +252,56 @@ export class RewardsService {
         }
     }
 
-    private calculateWeights(
+    private async calculateWeights(
         nodes: Node[],
         countryNodeCounts: CountryNodeCounts,
-    ): NodeWeightsResult {
+    ) {
         const weightsByNodeId = new Map<number, number>();
         let totalWeight = 0;
 
         for (const node of nodes) {
-            const weight = this.calculateNodeWeight(node, countryNodeCounts);
+            const weight = await this.calculateNodeWeight(
+                node,
+                countryNodeCounts,
+            );
 
             weightsByNodeId.set(node.id, weight);
             totalWeight += weight;
         }
 
         return { weightsByNodeId, totalWeight };
+    }
+
+    async recalculateAllWeights() {
+        const providers = await this.db.findAllProviders();
+
+        // 1. Собираем все ноды для расчета общей статистики сети
+        const allNodes = providers.flatMap((p) => p.nodes);
+        const countryCounts = this.getCountryNodeCounts(allNodes);
+
+        // 2. Считаем веса для каждого провайдера
+        for (const provider of providers) {
+            const nodeWeights: Record<number, number> = {};
+            let totalWeight = 0;
+
+            for (const node of provider.nodes) {
+                const weight = await this.calculateNodeWeight(
+                    node,
+                    countryCounts,
+                );
+
+                nodeWeights[node.id] = weight;
+                totalWeight += weight;
+            }
+
+            // 3. Сохраняем результат в "БД"
+            await this.db.updateWeights(provider.address, {
+                totalWeight,
+                averageWeight: totalWeight / (provider.nodes.length || 1),
+                nodeWeights,
+            });
+        }
+        this._logger.log('Weights synchronized with DB');
     }
 
     private buildProviderRewards(
@@ -364,8 +342,9 @@ export class RewardsService {
         };
     }
 
-    private calculateBaseReward(node: Node): number {
-        const baseCost = this.countryBaseCost[node.country] ?? toNano('1.0');
+    private async calculateBaseReward(node: Node) {
+        const baseCost =
+            (await this.db.getCountryBaseCost(node.country)) ?? toNano('1.0');
 
         return Number(baseCost) * this.baseMargin;
     }
@@ -380,17 +359,18 @@ export class RewardsService {
         return counts;
     }
 
-    private calculateNodeWeight(
+    private async calculateNodeWeight(
         node: Node,
         countryNodeCounts: CountryNodeCounts,
-    ): number {
+    ) {
         const presenceScore = 0.15;
         const effectiveRating = node.reviewsCount === 0 ? 3.0 : node.rating;
         const ratingFactor = Math.pow(effectiveRating / 5.0, 2);
 
         const qualityScore = 0.1 * Math.log(node.tickets + 1);
 
-        const countryDemand = this.countryDemand[node.country] ?? 100;
+        const countryDemand =
+            (await this.db.getCountryDemand(node.country)) ?? 100;
         const countryExisting = countryNodeCounts[node.country] ?? 0;
         const demandFactor = countryDemand / (countryExisting + 1);
         const locationMultiplier = Math.min(

@@ -1,4 +1,4 @@
-import { NodeWithWeight } from '../types/rewards.types';
+import { NodeWithWeight } from '../../rewards/types/rewards.types';
 
 export class ProviderNodesWithWeightResponseDTO {
     address: string;
