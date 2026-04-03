@@ -23,7 +23,7 @@ export class DbService {
             owner: 'EQB7PgjX66DGBfkOhwMV7h0haCP0FTEYc8aoSC6h5Y4MgJKe',
             nodes: [
                 {
-                    id: 101,
+                    id: '101n',
                     country: 'US',
                     rating: 4.8,
                     reviewsCount: 128,
@@ -32,7 +32,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 102,
+                    id: '102n',
                     country: 'DE',
                     rating: 3.2,
                     reviewsCount: 41,
@@ -41,7 +41,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 103,
+                    id: '103n',
                     country: 'FR',
                     rating: 1.1,
                     reviewsCount: 12,
@@ -50,7 +50,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 104,
+                    id: '104n',
                     country: 'SG',
                     rating: 0,
                     reviewsCount: 0,
@@ -59,7 +59,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 105,
+                    id: '105n',
                     country: 'US',
                     rating: 2.4,
                     reviewsCount: 19,
@@ -79,7 +79,7 @@ export class DbService {
             owner: 'EQCD4tkrxmGcQ7ww3BYcD59-YOt4udc2zVnFVCmxM3fkAoqv',
             nodes: [
                 {
-                    id: 201,
+                    id: '201n',
                     country: 'DE',
                     rating: 4.9,
                     reviewsCount: 210,
@@ -88,7 +88,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 202,
+                    id: '202n',
                     country: 'FR',
                     rating: 2.0,
                     reviewsCount: 33,
@@ -97,7 +97,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 203,
+                    id: '203n',
                     country: 'US',
                     rating: 3.7,
                     reviewsCount: 58,
@@ -106,7 +106,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 204,
+                    id: '204n',
                     country: 'SG',
                     rating: 0,
                     reviewsCount: 0,
@@ -115,7 +115,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 205,
+                    id: '205n',
                     country: 'DE',
                     rating: 4.0,
                     reviewsCount: 44,
@@ -135,7 +135,7 @@ export class DbService {
             owner: 'EQC394rp_XbLMOmUyESLjKIgBK-8RvEboUm8HPi7U78eMliZ',
             nodes: [
                 {
-                    id: 301,
+                    id: '301n',
                     country: 'FR',
                     rating: 4.3,
                     reviewsCount: 97,
@@ -144,7 +144,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 302,
+                    id: '302n',
                     country: 'US',
                     rating: 1.8,
                     reviewsCount: 21,
@@ -153,7 +153,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 303,
+                    id: '303n',
                     country: 'DE',
                     rating: 3.9,
                     reviewsCount: 63,
@@ -162,7 +162,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 304,
+                    id: '304n',
                     country: 'SG',
                     rating: 2.7,
                     reviewsCount: 34,
@@ -171,7 +171,7 @@ export class DbService {
                     weight: 0,
                 },
                 {
-                    id: 305,
+                    id: '305n',
                     country: 'US',
                     rating: 4.6,
                     reviewsCount: 140,
@@ -220,6 +220,14 @@ export class DbService {
                 node.weight = updateData.nodeWeights[node.id] ?? 0;
             });
         }
+    }
+
+    async findNodes(providerAddress: string, nodesIds: string[]) {
+        const provider = await this.findProviderByAddress(providerAddress);
+
+        if (!provider) return [];
+
+        return provider.nodes.filter((n) => nodesIds.includes(n.id));
     }
 
     async getCountriesDemand() {

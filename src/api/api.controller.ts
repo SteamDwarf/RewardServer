@@ -1,8 +1,10 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { NodesService } from 'src/nodes/nodes.service';
 import { NodeProviderResponseDTO } from './dto/nodeProviderResponse.dto';
 import { fromNano } from '@ton/core';
 import { NodesDemandDataResponseDTO } from './dto/nodesDemandDataResponse.dto';
+import { NodesResponseDTO } from './dto/nodesResponse.dto';
+import { NodesRequestDTO } from './dto/nodesRequest.dto';
 
 @Controller('api')
 export class ApiController {
@@ -30,6 +32,18 @@ export class ApiController {
             ...d,
             cost: fromNano(d.cost),
         }));
+    }
+
+    @Post('nodes')
+    async getNodes(
+        @Body() requestData: NodesRequestDTO,
+    ): Promise<NodesResponseDTO> {
+        const nodes = await this.nodesService.getNodes(
+            requestData.providerAddress,
+            requestData.nodesIds,
+        );
+
+        return { nodes };
     }
 
     /* @Post('send-jettons')

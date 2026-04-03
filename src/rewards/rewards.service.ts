@@ -218,7 +218,7 @@ export class RewardsService implements OnModuleInit {
     }
 
     private async calculateBaseRewards(nodes: Node[]) {
-        const baseRewardsByNodeId = new Map<number, number>();
+        const baseRewardsByNodeId = new Map<string, number>();
         let baseSum = 0;
 
         for (const node of nodes) {
@@ -256,7 +256,7 @@ export class RewardsService implements OnModuleInit {
         nodes: Node[],
         countryNodeCounts: CountryNodeCounts,
     ) {
-        const weightsByNodeId = new Map<number, number>();
+        const weightsByNodeId = new Map<string, number>();
         let totalWeight = 0;
 
         for (const node of nodes) {
@@ -306,9 +306,9 @@ export class RewardsService implements OnModuleInit {
 
     private buildProviderRewards(
         provider: NodeProvider,
-        baseRewardsByNodeId: Map<number, number>,
+        baseRewardsByNodeId: Map<string, number>,
         baseScale: number,
-        weightsByNodeId: Map<number, number>,
+        weightsByNodeId: Map<string, number>,
         totalWeight: number,
         perfPool: bigint,
     ): ProviderRewardResult {

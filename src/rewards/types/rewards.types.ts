@@ -1,7 +1,6 @@
 import { Address } from '@ton/core';
 import { Node } from '../../nodes/types/nodes.types';
 
-
 export interface RewardInfo {
     amount: bigint;
     isClaimed: boolean;
@@ -13,7 +12,7 @@ export interface ProviderReward extends RewardInfo {
 }
 
 export interface NodeRewardResult {
-    nodeId: number;
+    nodeId: string;
     country: string;
     baseReward: number;
     performanceReward: number;

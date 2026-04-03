@@ -54,4 +54,8 @@ export class NodesService {
             };
         });
     }
+
+    async getNodes(providerAddress: string, nodesIds: string[]) {
+        return this.db.findNodes(providerAddress, nodesIds);
+    }
 }

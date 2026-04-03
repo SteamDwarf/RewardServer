@@ -10,7 +10,7 @@ export interface NodeProvider {
 }
 
 export interface Node {
-    id: number;
+    id: string;
     country: string;
     rating: number;
     reviewsCount: number;
